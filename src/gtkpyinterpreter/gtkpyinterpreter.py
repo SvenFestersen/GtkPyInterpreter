@@ -137,6 +137,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       pass
     else:
       #result
+      pass
     
   def _cb_input_key_press(self, entry, event):
     if event.keyval == 65362:
