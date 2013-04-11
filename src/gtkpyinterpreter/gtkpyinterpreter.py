@@ -22,14 +22,40 @@ class GtkInterpreter(InteractiveInterpreter):
     
 class GtkInterpreterStandardOutput(object):
   
+  __gproperties__ = {'auto-scroll': (GObject.TYPE_BOOLEAN, "auto-scroll",
+                                    "Whether to automatically scroll the output.",
+                                    True, GObject.PARAM_READWRITE)}
+  
   def __init__(self, textview):
     super(GtkInterpreterStandardOutput, self).__init__()
     self.textview = textview
+    #properties
+    self._prop_auto_scroll = True
     
   def write(self, txt):
     textbuffer = self.textview.get_buffer()    
     textiter = textbuffer.get_end_iter()
     textbuffer.insert(textiter, txt)
+    if self._prop_auto_scroll:
+      self.textview.scroll_mark_onscreen(textbuffer.get_insert())
+    
+  def get_property(self, prop):
+    if prop.name == 'auto-scroll':
+      return self._prop_auto_scroll
+    else:
+      return super(GtkPythonInterpreter, self).get_property(prop)
+    
+  def set_property(self, prop, val):
+    if prop.name == 'auto-scroll':
+      self._prop_auto_scroll = val
+    else:
+      super(GtkPythonInterpreter, self).set_property(prop, val)
+      
+  def get_auto_scroll(self):
+    return self.get_property('auto-scroll')
+      
+  def set_auto_scroll(self, scroll):
+    self.set_property('auto-scroll', scroll)
     
     
 class GtkInterpreterErrorOutput(GtkInterpreterStandardOutput):
@@ -42,6 +68,8 @@ class GtkInterpreterErrorOutput(GtkInterpreterStandardOutput):
     textbuffer = self.textview.get_buffer()    
     textiter = textbuffer.get_end_iter()
     textbuffer.insert_with_tags_by_name(textiter, txt, 'error')
+    if self._prop_auto_scroll:
+      self.textview.scroll_mark_onscreen(textbuffer.get_insert())
     
     
 class CommandHistory(object):
@@ -85,20 +113,12 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     super(GtkPyInterpreterWidget, self).__init__()
     #properties
     self._prop_auto_scroll = True
-    #locals
-    if not '__name__' in interpreter_locals:
-      interpreter_locals['__name__'] = self.name
-    if not '__doc__' in interpreter_locals:
-      interpreter_locals['__doc__'] = self.__doc__
-    if not '__class__' in interpreter_locals:
-      interpreter_locals['__class__'] = self.__class__.__name__
     #history
     self._history = CommandHistory()
     #output
     sw = Gtk.ScrolledWindow()
     self.output = Gtk.TextView()
     self.output.set_editable(False)
-    self.output.get_buffer().connect_after('changed', self._cb_output_buffer_insert)
     sw.add(self.output)
     self.pack_start(sw, True, True, 0)
     #input
@@ -106,6 +126,14 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     self.pack_start(self.input, False, False, 0)
     self.input.connect('activate', self._cb_command_receive)
     self.input.connect('key-press-event', self._cb_input_key_press)
+    #locals
+    if not '__name__' in interpreter_locals:
+      interpreter_locals['__name__'] = self.name
+    if not '__doc__' in interpreter_locals:
+      interpreter_locals['__doc__'] = self.__doc__
+    if not '__class__' in interpreter_locals:
+      interpreter_locals['__class__'] = self.__class__.__name__
+    interpreter_locals['clear'] = self._clear
     #interpreter
     self.gtk_stdout = GtkInterpreterStandardOutput(self.output)
     self.gtk_stderr = GtkInterpreterErrorOutput(self.output)
@@ -155,9 +183,9 @@ class GtkPyInterpreterWidget(Gtk.VBox):
         entry.set_text('')
       return True
       
-  def _cb_output_buffer_insert(self, textbuffer):
-    if self._prop_auto_scroll:
-      self.output.scroll_to_iter(textbuffer.get_end_iter(), 0.0, False, 0.5, 0.5)
+  #private methods    
+  def _clear(self):
+    self.output.get_buffer().set_text('')
       
   #public methods
   def write(self, txt):
@@ -174,6 +202,8 @@ class GtkPyInterpreterWidget(Gtk.VBox):
   def set_property(self, prop, val):
     if prop.name == 'auto-scroll':
       self._prop_auto_scroll = val
+      self._gtk_stdout.set_auto_scroll(val)
+      self._gtk_stderr.set_auto_scroll(val)
     else:
       super(GtkPythonInterpreter, self).set_property(prop, val)
       
@@ -186,6 +216,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       
 if __name__ == '__main__':
   w = Gtk.Window()
+  w.set_title('Gtk3 Interactive Python Interpreter')
   w.set_default_size(800, 600)
   w.connect('destroy', Gtk.main_quit)
   c = GtkPyInterpreterWidget({'window':w})
