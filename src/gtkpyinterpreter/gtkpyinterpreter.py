@@ -118,6 +118,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     #output
     sw = Gtk.ScrolledWindow()
     self.output = Gtk.TextView()
+    self.output.set_wrap_mode(Gtk.WrapMode.WORD)
     self.output.set_editable(False)
     sw.add(self.output)
     self.pack_start(sw, True, True, 0)
