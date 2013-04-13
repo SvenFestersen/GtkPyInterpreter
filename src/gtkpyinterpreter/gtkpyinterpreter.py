@@ -113,6 +113,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     super(GtkPyInterpreterWidget, self).__init__()
     #properties
     self._prop_auto_scroll = True
+    self._prev_cmd = []
     #history
     self._history = CommandHistory()
     #output
@@ -143,7 +144,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
   #callbacks    
   def _cb_command_receive(self, entry):
     """
-    TODO: fix multiline input
+
     """
     #get command
     cmd = entry.get_text()
@@ -153,20 +154,28 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     #add output
     textbuffer = self.output.get_buffer()    
     textiter = textbuffer.get_end_iter()
-    textbuffer.insert(textiter, '%s %s\n' % (self.line_start, cmd))
+    line_start = '' if self._prev_cmd != [] else self.line_start
+    textbuffer.insert(textiter, '%s %s\n' % (line_start, cmd))
     #interpret command
     res = self.interpreter.runsource(cmd)
-    print res
     if res == True:
       #wait for more input
       textiter = textbuffer.get_end_iter()
       textbuffer.insert(textiter, ' ...')
-    elif res == False:
-      #exception
-      pass
+      self._prev_cmd.append(cmd)
     else:
-      #result
-      pass
+      if self._prev_cmd != [] and cmd.strip() == '':
+        #compile multiline input
+        self._prev_cmd.append(cmd)
+        ncmd = '\n'.join(self._prev_cmd) + '\n'
+        res = self.interpreter.runsource(ncmd)
+        self._prev_cmd = []
+      elif self._prev_cmd != []:
+        textiter = textbuffer.get_end_iter()
+        textbuffer.insert(textiter, ' ...')
+        self._prev_cmd.append(cmd)
+      else:
+        self._prev_cmd = []
     
   def _cb_input_key_press(self, entry, event):
     if event.keyval == 65362:
