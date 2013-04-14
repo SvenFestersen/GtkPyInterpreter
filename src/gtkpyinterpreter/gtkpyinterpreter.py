@@ -253,6 +253,9 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     
   def get_output_buffer(self):
     return self.output.get_buffer()
+    
+  def get_history(self):
+    return self._history
       
       
 if __name__ == '__main__':
