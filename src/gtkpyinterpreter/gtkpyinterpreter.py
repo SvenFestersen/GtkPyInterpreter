@@ -98,26 +98,37 @@ class CommandHistory(object):
       f = open(self._filename, 'a')
       f.write(cmd + '\n')
       f.close()
+      
+  def _clear_file(self):
+    if self._filename != None and os.path.exists(self._filename):
+      f = open(self._filename, 'w')
+      f.write('')
+      f.close()
   
   #public methods
   def add(self, cmd):
     self._cmds.append(cmd)
     self._idx = len(self._cmds)
     self._add_to_file(cmd)
+  
+  def clear(self):
+    self._cmds = []
+    self._idx = -1
+    self._clear_file()
+    
+  def down(self):
+    if self._cmds == [] or self._idx >= len(self._cmds) - 1:
+      return None
+    else:
+      self._idx += 1
+      cmd = self._cmds[self._idx]
+      return cmd
     
   def up(self):
     if self._cmds == [] or self._idx <= 0:
       return None
     else:
       self._idx -= 1
-      cmd = self._cmds[self._idx]
-      return cmd
-      
-  def down(self):
-    if self._cmds == [] or self._idx >= len(self._cmds) - 1:
-      return None
-    else:
-      self._idx += 1
       cmd = self._cmds[self._idx]
       return cmd
 
