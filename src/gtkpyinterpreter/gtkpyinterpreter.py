@@ -202,25 +202,26 @@ class GtkPyInterpreterWidget(Gtk.VBox):
   def _clear(self):
     self.output.get_buffer().set_text('')
       
-  #public methods
-  def write(self, txt):
-    textbuffer = self.output.get_buffer()    
-    textiter = textbuffer.get_end_iter()
-    textbuffer.insert(textiter, txt)
-    
-  def get_property(self, prop):
+  #gobject property methods
+  def do_get_property(self, prop):
     if prop.name == 'auto-scroll':
       return self._prop_auto_scroll
     else:
       return super(GtkPythonInterpreter, self).get_property(prop)
     
-  def set_property(self, prop, val):
+  def do_set_property(self, prop, val):
     if prop.name == 'auto-scroll':
       self._prop_auto_scroll = val
       self._gtk_stdout.set_auto_scroll(val)
       self._gtk_stderr.set_auto_scroll(val)
     else:
       super(GtkPythonInterpreter, self).set_property(prop, val)
+      
+  #public methods
+  def write(self, txt):
+    textbuffer = self.output.get_buffer()    
+    textiter = textbuffer.get_end_iter()
+    textbuffer.insert(textiter, txt)
       
   def get_auto_scroll(self):
     return self.get_property('auto-scroll')
