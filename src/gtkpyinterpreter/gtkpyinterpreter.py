@@ -1,6 +1,7 @@
 from code import InteractiveInterpreter
 from gi.repository import Gtk
 from gi.repository import GObject
+import os
 import sys
 
 
@@ -74,14 +75,35 @@ class GtkInterpreterErrorOutput(GtkInterpreterStandardOutput):
     
 class CommandHistory(object):
   
-  def __init__(self):
+  def __init__(self, filename=None):
     super(CommandHistory, self).__init__()
     self._cmds = []
     self._idx = -1
+    self._filename = filename
+    self._load_from_file()
     
+  #private methods
+  def _load_from_file(self):
+    if self._filename != None and os.path.exists(self._filename):
+      f = open(self._filename, 'r')
+      data = f.read()
+      f.close()
+      items = data.split('\n')
+      items = filter(lambda x: x.strip != '', items)
+      self._cmds = items
+      self._idx = len(self._cmds) - 1
+    
+  def _add_to_file(self, cmd):
+    if self._filename != None:
+      f = open(self._filename, 'a')
+      f.write(cmd + '\n')
+      f.close()
+  
+  #public methods
   def add(self, cmd):
     self._cmds.append(cmd)
     self._idx = len(self._cmds)
+    self._add_to_file(cmd)
     
   def up(self):
     if self._cmds == [] or self._idx <= 0:
@@ -110,13 +132,13 @@ class GtkPyInterpreterWidget(Gtk.VBox):
   line_start = ' >>>'
   banner = 'Welcome to the GtkPyInterpreterWidget :-)'
   
-  def __init__(self, interpreter_locals={}):
+  def __init__(self, interpreter_locals={}, history_fn=None):
     super(GtkPyInterpreterWidget, self).__init__()
     #properties
     self._prop_auto_scroll = True
     self._prev_cmd = []
     #history
-    self._history = CommandHistory()
+    self._history = CommandHistory(history_fn)
     #output
     sw = Gtk.ScrolledWindow()
     self.output = Gtk.TextView()
@@ -238,7 +260,7 @@ if __name__ == '__main__':
   w.set_title('Gtk3 Interactive Python Interpreter')
   w.set_default_size(800, 600)
   w.connect('destroy', Gtk.main_quit)
-  c = GtkPyInterpreterWidget({'window':w})
+  c = GtkPyInterpreterWidget({'window':w}, '/home/sven/temp/pyrc')
   w.add(c)
   w.show_all()
   Gtk.main()
