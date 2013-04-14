@@ -228,6 +228,9 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       
   def set_auto_scroll(self, scroll):
     self.set_property('auto-scroll', scroll)
+    
+  def get_output_buffer(self):
+    return self.output.get_buffer()
       
       
 if __name__ == '__main__':
