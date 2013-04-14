@@ -108,6 +108,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
   
   name = '__console__'
   line_start = ' >>>'
+  banner = 'Welcome to the GtkPyInterpreterWidget :-)'
   
   def __init__(self, interpreter_locals={}):
     super(GtkPyInterpreterWidget, self).__init__()
@@ -123,6 +124,10 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     self.output.set_editable(False)
     sw.add(self.output)
     self.pack_start(sw, True, True, 0)
+    #write banner to output
+    textbuffer = self.output.get_buffer()    
+    textiter = textbuffer.get_end_iter()
+    textbuffer.insert(textiter, self.banner + '\n\n')
     #input
     self.input = Gtk.Entry()
     self.pack_start(self.input, False, False, 0)
