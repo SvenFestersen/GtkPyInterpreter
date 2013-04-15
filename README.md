@@ -1,5 +1,5 @@
 # GtkPyInterpreter
-A simple Gtk3 widget that displays the cmdline in- and output of a interactive
+A simple Gtk3 widget that displays the cmdline in- and output of an interactive
 Python interpreter.
 
 ## Features
@@ -10,3 +10,6 @@ cmd input
 
 ## Dependencies
 The only dependency is `PyGObject`.
+
+## License
+GPL 3
