@@ -197,7 +197,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     textbuffer = self.output.get_buffer()    
     textiter = textbuffer.get_end_iter()
     line_start = '' if self._prev_cmd != [] else self.line_start
-    textbuffer.insert(textiter, '%s %s\n' % (line_start, cmd))
+    self.gtk_stdout.write('%s %s\n' % (line_start, cmd))
     #interpret command
     res = self.interpreter.runsource(cmd)
     self.interpreter.showsyntaxerror()
