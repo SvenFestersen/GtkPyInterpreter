@@ -160,6 +160,8 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     self.output = Gtk.TextView()
     self.output.set_wrap_mode(Gtk.WrapMode.WORD)
     self.output.set_editable(False)
+    self.output.set_left_margin(4)
+    self.output.set_right_margin(4)
     sw.add(self.output)
     self.pack_start(sw, True, True, 0)
     #write banner to output
