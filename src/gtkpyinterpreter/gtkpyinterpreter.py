@@ -20,6 +20,10 @@ class GtkInterpreter(InteractiveInterpreter):
     sys.stderr = sys.__stderr__
     return result
     
+  def write(self, data):
+    if data.strip() != 'None':
+      self.stderr.write(data)
+    
     
 class GtkInterpreterStandardOutput(object):
   
@@ -196,6 +200,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     textbuffer.insert(textiter, '%s %s\n' % (line_start, cmd))
     #interpret command
     res = self.interpreter.runsource(cmd)
+    self.interpreter.showsyntaxerror()
     if res == True:
       #wait for more input
       textiter = textbuffer.get_end_iter()
