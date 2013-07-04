@@ -152,6 +152,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     #properties
     self._prop_auto_scroll = True
     self._prev_cmd = []
+    self._pause_interpret = False
     #history
     self._history = CommandHistory(history_fn)
     #output
@@ -194,18 +195,19 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     #add to history
     self._history.add(cmd)
     #add output
-    textbuffer = self.output.get_buffer()    
-    textiter = textbuffer.get_end_iter()
     line_start = '' if self._prev_cmd != [] else self.line_start
     self.gtk_stdout.write('%s %s\n' % (line_start, cmd))
     #interpret command
-    res = self.interpreter.runsource(cmd)
-    self.interpreter.showsyntaxerror()
+    if not self._pause_interpret:
+      res = self.interpreter.runsource(cmd)
+      self.interpreter.showsyntaxerror()
+    else:
+      res = False
     if res == True:
       #wait for more input
-      textiter = textbuffer.get_end_iter()
-      textbuffer.insert(textiter, ' ...')
+      self.gtk_stdout.write('...')
       self._prev_cmd.append(cmd)
+      self._pause_interpret = True
     else:
       if self._prev_cmd != [] and cmd.strip() == '':
         #compile multiline input
@@ -213,9 +215,9 @@ class GtkPyInterpreterWidget(Gtk.VBox):
         ncmd = '\n'.join(self._prev_cmd) + '\n'
         res = self.interpreter.runsource(ncmd)
         self._prev_cmd = []
+        self._pause_interpret = False
       elif self._prev_cmd != []:
-        textiter = textbuffer.get_end_iter()
-        textbuffer.insert(textiter, ' ...')
+        self.gtk_stdout.write('...')
         self._prev_cmd.append(cmd)
       else:
         self._prev_cmd = []
