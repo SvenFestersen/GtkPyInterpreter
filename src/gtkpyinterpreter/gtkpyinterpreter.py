@@ -226,12 +226,14 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       cmd = self._history.up()
       if cmd != None:
         entry.set_text(cmd)
+        entry.set_position(-1)
       return True
     elif event.keyval == 65364:
       #down
       cmd = self._history.down()
       if cmd != None:
         entry.set_text(cmd)
+        entry.set_position(-1)
       else:
         entry.set_text('')
       return True
