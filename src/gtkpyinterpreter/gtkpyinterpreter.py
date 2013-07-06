@@ -117,6 +117,8 @@ class CommandHistory(object):
   
   #public methods
   def add(self, cmd):
+    cmd = cmd.strip()
+    if cmd == '': return
     self._cmds.append(cmd)
     self._idx = len(self._cmds)
     self._add_to_file(cmd)
@@ -186,7 +188,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     #write banner to output
     self.gtk_stdout.write(self.banner + '\n\n' + self.line_start)
     
-  #callbacks          
+  #callbacks      
   def _cb_text_changed(self, textbuffer):
     start_iter = textbuffer.get_iter_at_mark(self._input_mark)
     end_iter = textbuffer.get_end_iter()
