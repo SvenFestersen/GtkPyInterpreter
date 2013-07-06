@@ -168,7 +168,8 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     self.output = Gtk.TextView()
     self.output.set_wrap_mode(Gtk.WrapMode.WORD)
     textbuffer = self.output.get_buffer()
-    self._input_mark = textbuffer.create_mark('input_start', textbuffer.get_start_iter(), True)
+    self._input_mark = textbuffer.create_mark('input_start',
+                                              textbuffer.get_start_iter(), True)
     sw.add(self.output)
     self.pack_start(sw, True, True, 0)
     self.eh_changed = textbuffer.connect('changed', self._cb_text_changed)
@@ -184,7 +185,8 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     #interpreter
     self.gtk_stdout = GtkInterpreterStandardOutput(self.output, self.eh_changed)
     self.gtk_stderr = GtkInterpreterErrorOutput(self.output, self.eh_changed)
-    self.interpreter = GtkInterpreter(self.gtk_stdout, self.gtk_stderr, interpreter_locals)
+    self.interpreter = GtkInterpreter(self.gtk_stdout, self.gtk_stderr,
+                                      interpreter_locals)
     #write banner to output
     self.gtk_stdout.write(self.banner + '\n\n' + self.line_start)
     
@@ -306,7 +308,7 @@ if __name__ == '__main__':
   w.set_title('Gtk3 Interactive Python Interpreter')
   w.set_default_size(800, 600)
   w.connect('destroy', Gtk.main_quit)
-  c = GtkPyInterpreterWidget({'window':w}, '/home/sven/temp/pyrc')
+  c = GtkPyInterpreterWidget({'window':w}, '/tmp/pyrc')
   w.add(c)
   w.show_all()
   Gtk.main()
