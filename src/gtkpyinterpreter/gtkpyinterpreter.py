@@ -1,4 +1,5 @@
 from code import InteractiveInterpreter
+from gi.repository import Gdk
 from gi.repository import Gtk
 from gi.repository import GObject
 import os
@@ -31,18 +32,27 @@ class GtkInterpreterStandardOutput(object):
                                     "Whether to automatically scroll the output.",
                                     True, GObject.PARAM_READWRITE)}
   
-  def __init__(self, textview):
+  def __init__(self, textview, eh_changed):
     super(GtkInterpreterStandardOutput, self).__init__()
     self.textview = textview
     #properties
+    textbuffer = self.textview.get_buffer()
+    textbuffer.create_tag(tag_name='protected', editable=False)
+    self._input_mark = textbuffer.get_mark('input_start')
     self._prop_auto_scroll = True
+    self._eh_changed = eh_changed
     
-  def write(self, txt):
+  def write(self, txt, move_cursor=False, tag_names=['protected']):
     textbuffer = self.textview.get_buffer()    
+    textbuffer.handler_block(self._eh_changed)
     textiter = textbuffer.get_end_iter()
-    textbuffer.insert(textiter, txt)
+    textbuffer.insert_with_tags_by_name(textiter, txt, *tag_names)
     if self._prop_auto_scroll:
       self.textview.scroll_mark_onscreen(textbuffer.get_insert())
+    textbuffer.move_mark(self._input_mark, textbuffer.get_end_iter())
+    if move_cursor:
+      textbuffer.place_cursor(textbuffer.get_iter_at_mark(self._input_mark))
+    textbuffer.handler_unblock(self._eh_changed)
     
   def get_property(self, prop):
     if prop.name == 'auto-scroll':
@@ -65,16 +75,12 @@ class GtkInterpreterStandardOutput(object):
     
 class GtkInterpreterErrorOutput(GtkInterpreterStandardOutput):
   
-  def __init__(self, textview, color='#cc0000'):
-    super(GtkInterpreterErrorOutput, self).__init__(textview)
+  def __init__(self, textview, eh_changed, color='#cc0000'):
+    super(GtkInterpreterErrorOutput, self).__init__(textview, eh_changed)
     self.textview.get_buffer().create_tag(tag_name='error', foreground=color)
     
-  def write(self, txt):
-    textbuffer = self.textview.get_buffer()    
-    textiter = textbuffer.get_end_iter()
-    textbuffer.insert_with_tags_by_name(textiter, txt, 'error')
-    if self._prop_auto_scroll:
-      self.textview.scroll_mark_onscreen(textbuffer.get_insert())
+  def write(self, txt, move_cursor=False, tag_names=['protected', 'error']):
+    super(GtkInterpreterErrorOutput, self).write(txt, move_cursor, tag_names)
     
     
 class CommandHistory(object):
@@ -111,6 +117,8 @@ class CommandHistory(object):
   
   #public methods
   def add(self, cmd):
+    cmd = cmd.strip()
+    if cmd == '': return
     self._cmds.append(cmd)
     self._idx = len(self._cmds)
     self._add_to_file(cmd)
@@ -144,7 +152,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
                                     True, GObject.PARAM_READWRITE)}
   
   name = '__console__'
-  line_start = ' >>>'
+  line_start = ' >>> '
   banner = 'Welcome to the GtkPyInterpreterWidget :-)'
   
   def __init__(self, interpreter_locals={}, history_fn=None):
@@ -159,20 +167,15 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     sw = Gtk.ScrolledWindow()
     self.output = Gtk.TextView()
     self.output.set_wrap_mode(Gtk.WrapMode.WORD)
-    self.output.set_editable(False)
     self.output.set_left_margin(4)
     self.output.set_right_margin(4)
+    textbuffer = self.output.get_buffer()
+    self._input_mark = textbuffer.create_mark('input_start',
+                                              textbuffer.get_start_iter(), True)
     sw.add(self.output)
     self.pack_start(sw, True, True, 0)
-    #write banner to output
-    textbuffer = self.output.get_buffer()    
-    textiter = textbuffer.get_end_iter()
-    textbuffer.insert(textiter, self.banner + '\n\n')
-    #input
-    self.input = Gtk.Entry()
-    self.pack_start(self.input, False, False, 0)
-    self.input.connect('activate', self._cb_command_receive)
-    self.input.connect('key-press-event', self._cb_input_key_press)
+    self.eh_changed = textbuffer.connect('changed', self._cb_text_changed)
+    self.output.connect('event', self._cb_textview_event)
     #locals
     if not '__name__' in interpreter_locals:
       interpreter_locals['__name__'] = self.name
@@ -182,23 +185,66 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       interpreter_locals['__class__'] = self.__class__.__name__
     interpreter_locals['clear'] = self._clear
     #interpreter
-    self.gtk_stdout = GtkInterpreterStandardOutput(self.output)
-    self.gtk_stderr = GtkInterpreterErrorOutput(self.output)
-    self.interpreter = GtkInterpreter(self.gtk_stdout, self.gtk_stderr, interpreter_locals)
+    self.gtk_stdout = GtkInterpreterStandardOutput(self.output, self.eh_changed)
+    self.gtk_stderr = GtkInterpreterErrorOutput(self.output, self.eh_changed)
+    self.interpreter = GtkInterpreter(self.gtk_stdout, self.gtk_stderr,
+                                      interpreter_locals)
+    #write banner to output
+    self.gtk_stdout.write(self.banner + '\n\n' + self.line_start)
     
-  #callbacks    
-  def _cb_command_receive(self, entry):
-    """
-
-    """
-    #get command
-    cmd = entry.get_text()
-    entry.set_text('')
+  #callbacks      
+  def _cb_text_changed(self, textbuffer):
+    start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+    end_iter = textbuffer.get_end_iter()
+    txt = textbuffer.get_text(start_iter, end_iter, True)
+    last_char = txt[-1]
+    if last_char == '\n':
+      textbuffer.apply_tag_by_name('protected', start_iter, end_iter)
+      self._cmd_receive(txt[:-1])
+      
+  def _cb_textview_event(self, textview, event):
+    if event.type == Gdk.EventType.KEY_PRESS:
+      textbuffer = textview.get_buffer()
+      if event.keyval == 65362:
+        #up
+        cmd = self._history.up()
+        if cmd != None:
+          start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+          end_iter = textbuffer.get_end_iter()
+          textbuffer.handler_block(self.eh_changed)
+          textbuffer.delete(start_iter, end_iter)
+          start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+          textbuffer.insert(start_iter, cmd)
+          textbuffer.handler_unblock(self.eh_changed)
+        return True
+      elif event.keyval == 65364:
+        #down
+        cmd = self._history.down()
+        if cmd != None:
+          start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+          end_iter = textbuffer.get_end_iter()
+          textbuffer.handler_block(self.eh_changed)
+          textbuffer.delete(start_iter, end_iter)
+          start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+          textbuffer.insert(start_iter, cmd)
+          textbuffer.handler_unblock(self.eh_changed)
+        else:
+          textbuffer.handler_block(self.eh_changed)
+          start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+          end_iter = textbuffer.get_end_iter()
+          textbuffer.delete(start_iter, end_iter)
+          textbuffer.handler_unblock(self.eh_changed)
+        return True
+      
+  #private methods    
+  def _clear(self):
+    self.output.get_buffer().set_text(self.line_start)
+    
+  def _cmd_receive(self, cmd):
     #add to history
     self._history.add(cmd)
     #add output
     line_start = '' if self._prev_cmd != [] else self.line_start
-    self.gtk_stdout.write('%s %s\n' % (line_start, cmd))
     #interpret command
     if not self._pause_interpret:
       res = self.interpreter.runsource(cmd)
@@ -207,7 +253,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       res = False
     if res == True:
       #wait for more input
-      self.gtk_stdout.write('...')
+      self.gtk_stdout.write('...', True)
       self._prev_cmd.append(cmd)
       self._pause_interpret = True
     else:
@@ -223,28 +269,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
         self._prev_cmd.append(cmd)
       else:
         self._prev_cmd = []
-    
-  def _cb_input_key_press(self, entry, event):
-    if event.keyval == 65362:
-      #up
-      cmd = self._history.up()
-      if cmd != None:
-        entry.set_text(cmd)
-        entry.set_position(-1)
-      return True
-    elif event.keyval == 65364:
-      #down
-      cmd = self._history.down()
-      if cmd != None:
-        entry.set_text(cmd)
-        entry.set_position(-1)
-      else:
-        entry.set_text('')
-      return True
-      
-  #private methods    
-  def _clear(self):
-    self.output.get_buffer().set_text('')
+        self.gtk_stdout.write(line_start, True)
       
   #gobject property methods
   def do_get_property(self, prop):
@@ -285,7 +310,7 @@ if __name__ == '__main__':
   w.set_title('Gtk3 Interactive Python Interpreter')
   w.set_default_size(800, 600)
   w.connect('destroy', Gtk.main_quit)
-  c = GtkPyInterpreterWidget({'window':w}, '/home/sven/temp/pyrc')
+  c = GtkPyInterpreterWidget({'window':w}, '/tmp/pyrc')
   w.add(c)
   w.show_all()
   Gtk.main()
