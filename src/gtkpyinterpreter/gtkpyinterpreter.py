@@ -197,6 +197,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     start_iter = textbuffer.get_iter_at_mark(self._input_mark)
     end_iter = textbuffer.get_end_iter()
     txt = textbuffer.get_text(start_iter, end_iter, True)
+    if len(txt) == 0: return
     last_char = txt[-1]
     if last_char == '\n':
       textbuffer.apply_tag_by_name('protected', start_iter, end_iter)
@@ -238,7 +239,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       
   #private methods    
   def _clear(self):
-    self.output.get_buffer().set_text(self.line_start)
+    self.output.get_buffer().set_text('')
     
   def _cmd_receive(self, cmd):
     #add to history
