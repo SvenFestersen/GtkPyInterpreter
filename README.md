@@ -14,8 +14,9 @@ Gtk.TextView. The implementation is pure Python and makes use of
 * signals for stdout and stderr write operations
 
 ## Known bugs/limitations
+* no `setup.py` yet
 * no support for raw_input
-* output is displayed _after_ the command returned, i.e. a running something
+* output is displayed _after_ the command returned, i.e. running something
   like
   
     ```python
@@ -25,9 +26,15 @@ Gtk.TextView. The implementation is pure Python and makes use of
     ```
     
   will block for 10 seconds and after that display the full output at once.
-
+  
 ## Dependencies
-The only dependency is `PyGObject`.
+The only dependency is the *PyGObject introspection* module that can be found in
+the package repositories of most Linux distributions.
+  
+## Installation
+There's no `setup.py` installation script yet, so to use the package
+`gtkpyinterpreter` just copy the complete package directory to a location in
+your Python path.
 
 ## License
 GPL 3
