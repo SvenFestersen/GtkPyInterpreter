@@ -2,6 +2,7 @@ from code import InteractiveInterpreter
 from gi.repository import Gdk
 from gi.repository import Gtk
 from gi.repository import GObject
+from gi.repository import Pango
 import os
 import sys
 
@@ -144,9 +145,17 @@ class CommandHistory(object):
 
 class GtkPyInterpreterWidget(Gtk.VBox):
   
-  __gproperties__ = {'auto-scroll': (GObject.TYPE_BOOLEAN, "auto-scroll",
-                                    "Whether to automatically scroll the output.",
-                                    True, GObject.PARAM_READWRITE)}
+  __gproperties__ = {
+                      'auto-scroll':      (GObject.TYPE_BOOLEAN, "auto-scroll",
+                                          ('Whether to automatically scroll ' + 
+                                          'the output.'),
+                                          True, GObject.PARAM_READWRITE),
+                      'font':             (GObject.TYPE_STRING, 'font',
+                                          ('Font definition for the font of ' +
+                                          'the input/output TextView'),
+                                          'sans 10',
+                                          GObject.PARAM_READWRITE),
+                    }
   
   name = '__console__'
   line_start = ' >>> '
@@ -156,6 +165,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     super(GtkPyInterpreterWidget, self).__init__()
     #properties
     self._prop_auto_scroll = True
+    self._prop_font = 'sans 10'
     self._prev_cmd = []
     self._pause_interpret = False
     #history
@@ -163,6 +173,8 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     #output
     sw = Gtk.ScrolledWindow()
     self.output = Gtk.TextView()
+    fontdesc = Pango.FontDescription(self._prop_font)
+    self.output.modify_font(fontdesc)
     self.output.set_wrap_mode(Gtk.WrapMode.WORD)
     self.output.set_left_margin(4)
     self.output.set_right_margin(4)
@@ -264,6 +276,8 @@ class GtkPyInterpreterWidget(Gtk.VBox):
   def do_get_property(self, prop):
     if prop.name == 'auto-scroll':
       return self._prop_auto_scroll
+    elif prop.name == 'font':
+      return self._prop_font
     else:
       return super(GtkPythonInterpreter, self).get_property(prop)
     
@@ -272,6 +286,10 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       self._prop_auto_scroll = val
       self._gtk_stdout.set_auto_scroll(val)
       self._gtk_stderr.set_auto_scroll(val)
+    elif prop.name == 'font':
+      self._prop_font = val
+      fontdesc = Pango.FontDescription(self._prop_font)
+      self.output.modify_font(fontdesc)
     else:
       super(GtkPythonInterpreter, self).set_property(prop, val)
       
@@ -283,9 +301,15 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       
   def get_auto_scroll(self):
     return self.get_property('auto-scroll')
+    
+  def get_font(self):
+    return self.get_property('font')
       
   def set_auto_scroll(self, scroll):
     self.set_property('auto-scroll', scroll)
+    
+  def set_font(self, font):
+    self.set_property('font', font)
     
   def get_output_buffer(self):
     return self.output.get_buffer()
@@ -300,6 +324,7 @@ if __name__ == '__main__':
   w.set_default_size(800, 600)
   w.connect('destroy', Gtk.main_quit)
   c = GtkPyInterpreterWidget({'window':w}, '/tmp/pyrc')
+  c.set_font('LiberationMono 10')
   w.add(c)
   w.show_all()
   Gtk.main()
