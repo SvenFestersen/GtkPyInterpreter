@@ -17,11 +17,13 @@ Gtk.TextView. The implementation is pure Python and makes use of
 * no support for raw_input
 * output is displayed _after_ the command returned, i.e. a running a something
   like
-    ```
+  
+    ```python
     for i in range(0, 10):
       time.sleep(1)
       print i
     ```
+    
   will block for 10 seconds and after that display the full output at once.
 
 ## Dependencies
