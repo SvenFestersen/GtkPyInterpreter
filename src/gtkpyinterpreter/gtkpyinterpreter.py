@@ -1,10 +1,13 @@
 from code import InteractiveInterpreter
+from rlcompleter import Completer
 from gi.repository import Gdk
 from gi.repository import Gtk
 from gi.repository import GObject
 from gi.repository import Pango
 import os
 import sys
+import __builtin__
+import __main__
 
 
 class GtkInterpreter(InteractiveInterpreter):
@@ -151,6 +154,40 @@ class CommandHistory(object):
       self._idx -= 1
       cmd = self._cmds[self._idx]
       return cmd
+      
+      
+class CommandCompleter(object):
+  
+  def __init__(self, local_vars):
+    super(CommandCompleter, self).__init__()
+    self._locals = local_vars
+    self._make_completer()
+    self._n = 0
+    self._text = ''
+    
+  def _make_completer(self):
+    l = {}
+    l.update(__builtin__.__dict__)
+    l.update(self._locals)
+    self._completer = Completer(l)
+    
+  def complete_start(self, text):
+    self._text = text
+    self._n = -1
+    return self.complete()
+    
+  def complete(self):
+    self._n += 1
+    suggest = self._completer.complete(self._text, self._n)
+    return suggest
+    
+  def complete_back(self):
+    self._n -= 1
+    if self._n < 0:
+      self._n = 0
+      return None
+    suggest = self._completer.complete(self._text, self._n)
+    return suggest
 
 
 class GtkPyInterpreterWidget(Gtk.VBox):
@@ -193,8 +230,11 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     self._prop_margins = 8
     self._prev_cmd = []
     self._pause_interpret = False
+    self._prev_key = -1
     #history
     self._history = CommandHistory(history_fn)
+    #completer
+    self._completer = CommandCompleter(interpreter_locals)
     #output
     sw = Gtk.ScrolledWindow()
     self.output = Gtk.TextView()
@@ -240,6 +280,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
           textbuffer.delete(start_iter, end_iter)
           start_iter = textbuffer.get_iter_at_mark(self._input_mark)
           textbuffer.insert(start_iter, cmd)
+        self._prev_key = event.keyval
         return True
       elif event.keyval == 65364:
         #down
@@ -254,6 +295,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
           start_iter = textbuffer.get_iter_at_mark(self._input_mark)
           end_iter = textbuffer.get_end_iter()
           textbuffer.delete(start_iter, end_iter)
+        self._prev_key = event.keyval
         return True
       elif event.keyval == 65293:
         #return
@@ -263,15 +305,61 @@ class GtkPyInterpreterWidget(Gtk.VBox):
         textbuffer.apply_tag_by_name('protected', start_iter, end_iter)
         textbuffer.insert(textbuffer.get_end_iter(), '\n')
         self._cmd_receive(txt)
+        self._prev_key = event.keyval
         return True
       elif event.keyval == 65360:
         #Home
         textbuffer.place_cursor(textbuffer.get_iter_at_mark(self._input_mark))
+        self._prev_key = event.keyval
         return True
       elif event.keyval == 65367:
         #End
         textbuffer.place_cursor(textbuffer.get_end_iter())
+        self._prev_key = event.keyval
         return True
+      elif event.keyval == 65289:
+        #tab for completion
+        #get suggestion
+        start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+        end_iter = textbuffer.get_end_iter()
+        txt = textbuffer.get_text(start_iter, end_iter, True)
+        if not self._prev_key in [65056, 65289]:
+          suggest = self._completer.complete_start(txt)
+        else:
+          suggest = self._completer.complete()
+        self._prev_key = event.keyval
+        #display suggestion
+        if suggest != None:
+          start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+          end_iter = textbuffer.get_end_iter()
+          textbuffer.delete(start_iter, end_iter)
+          start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+          textbuffer.insert(start_iter, suggest)
+        return True
+      elif event.keyval == 65056:
+        #tab (back) for completion
+        #check whether completion was started
+        if not self._prev_key in [65056, 65289]:
+          return True
+        #get suggestion
+        start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+        end_iter = textbuffer.get_end_iter()
+        txt = textbuffer.get_text(start_iter, end_iter, True)
+        suggest = self._completer.complete_back()
+        self._prev_key = event.keyval
+        #display suggestion
+        if suggest != None:
+          start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+          end_iter = textbuffer.get_end_iter()
+          textbuffer.delete(start_iter, end_iter)
+          start_iter = textbuffer.get_iter_at_mark(self._input_mark)
+          textbuffer.insert(start_iter, suggest)
+        return True
+      elif event.keyval == 65505:
+        #Shift modifier, has to be caught to prevent from setting self._prev_key
+        pass
+      else:
+        self._prev_key = event.keyval
         
   def _cb_stdout_written(self, stdout, text):
     self.emit('stdout-written', text)

@@ -9,6 +9,7 @@ Gtk.TextView. The implementation is pure Python and makes use of
 * input and output of the Python interpreter in Gtk.TextView widget
 * support for multiline code input
 * command history
+* tab completion
 * pass predefined locals to the widget that become available in the interpreter
 * various settings to change the appearance
 * signals for stdout and stderr write operations
