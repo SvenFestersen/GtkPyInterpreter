@@ -235,12 +235,21 @@ class GtkPyInterpreterWidget(Gtk.VBox):
           textbuffer.delete(start_iter, end_iter)
         return True
       elif event.keyval == 65293:
+        #return
         start_iter = textbuffer.get_iter_at_mark(self._input_mark)
         end_iter = textbuffer.get_end_iter()
         txt = textbuffer.get_text(start_iter, end_iter, True)
         textbuffer.apply_tag_by_name('protected', start_iter, end_iter)
         textbuffer.insert(textbuffer.get_end_iter(), '\n')
         self._cmd_receive(txt)
+        return True
+      elif event.keyval == 65360:
+        #Home
+        textbuffer.place_cursor(textbuffer.get_iter_at_mark(self._input_mark))
+        return True
+      elif event.keyval == 65367:
+        #End
+        textbuffer.place_cursor(textbuffer.get_end_iter())
         return True
       
   #private methods    
