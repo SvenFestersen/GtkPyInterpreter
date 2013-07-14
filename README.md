@@ -15,7 +15,7 @@ Gtk.TextView. The implementation is pure Python and makes use of
 
 ## Known bugs/limitations
 * no support for raw_input
-* output is displayed _after_ the command returned, i.e. a running a something
+* output is displayed _after_ the command returned, i.e. a running something
   like
   
     ```python
