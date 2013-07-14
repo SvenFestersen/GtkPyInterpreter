@@ -155,10 +155,15 @@ class GtkPyInterpreterWidget(Gtk.VBox):
                                           'the input/output TextView'),
                                           'sans 10',
                                           GObject.PARAM_READWRITE),
+                      'margins':          (GObject.TYPE_INT, 'margins',
+                                          ('Size of left and right margin ' +
+                                          'in pixels'),
+                                          0, 100, 8,
+                                          GObject.PARAM_READWRITE),                 
                     }
   
   name = '__console__'
-  line_start = ' >>> '
+  line_start = '>>> '
   banner = 'Welcome to the GtkPyInterpreterWidget :-)'
   
   def __init__(self, interpreter_locals={}, history_fn=None):
@@ -166,6 +171,7 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     #properties
     self._prop_auto_scroll = True
     self._prop_font = 'sans 10'
+    self._prop_margins = 8
     self._prev_cmd = []
     self._pause_interpret = False
     #history
@@ -176,8 +182,8 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     fontdesc = Pango.FontDescription(self._prop_font)
     self.output.modify_font(fontdesc)
     self.output.set_wrap_mode(Gtk.WrapMode.WORD)
-    self.output.set_left_margin(4)
-    self.output.set_right_margin(4)
+    self.output.set_left_margin(self._prop_margins)
+    self.output.set_right_margin(self._prop_margins)
     textbuffer = self.output.get_buffer()
     self._input_mark = textbuffer.create_mark('input_start',
                                               textbuffer.get_start_iter(), True)
@@ -278,6 +284,8 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       return self._prop_auto_scroll
     elif prop.name == 'font':
       return self._prop_font
+    elif prop.name == 'margins':
+      return self._prop_margins
     else:
       return super(GtkPythonInterpreter, self).get_property(prop)
     
@@ -290,6 +298,10 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       self._prop_font = val
       fontdesc = Pango.FontDescription(self._prop_font)
       self.output.modify_font(fontdesc)
+    elif prop.name == 'margins':
+      self._prop_margins = val
+      self.output.set_left_margin(self._prop_margins)
+      self.output.set_right_margin(self._prop_margins)
     else:
       super(GtkPythonInterpreter, self).set_property(prop, val)
       
@@ -304,12 +316,18 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     
   def get_font(self):
     return self.get_property('font')
+    
+  def get_margins(self):
+    return self.get_property('margins')
       
   def set_auto_scroll(self, scroll):
     self.set_property('auto-scroll', scroll)
     
   def set_font(self, font):
     self.set_property('font', font)
+    
+  def set_margins(self, pixels):
+    self.set_property('margins', pixels)
     
   def get_output_buffer(self):
     return self.output.get_buffer()
