@@ -27,11 +27,20 @@ class GtkInterpreter(InteractiveInterpreter):
       self.stderr.write(data)
     
     
-class GtkInterpreterStandardOutput(object):
+class GtkInterpreterStandardOutput(GObject.GObject):
   
-  __gproperties__ = {'auto-scroll': (GObject.TYPE_BOOLEAN, "auto-scroll",
-                                    "Whether to automatically scroll the output.",
-                                    True, GObject.PARAM_READWRITE)}
+  __gproperties__ = {
+                      'auto-scroll': (GObject.TYPE_BOOLEAN, 'auto-scroll',
+                                    ('Whether to automatically scroll the ' + 
+                                    'output.'),
+                                    True, GObject.PARAM_READWRITE),
+                    }
+                                    
+  __gsignals__ = {
+                  'output-written' : (GObject.SIGNAL_RUN_LAST,
+                                      GObject.TYPE_NONE,
+                                      (GObject.TYPE_STRING,)),
+                  }
   
   def __init__(self, textview):
     super(GtkInterpreterStandardOutput, self).__init__()
@@ -51,6 +60,7 @@ class GtkInterpreterStandardOutput(object):
     textbuffer.move_mark(self._input_mark, textbuffer.get_end_iter())
     if move_cursor:
       textbuffer.place_cursor(textbuffer.get_iter_at_mark(self._input_mark))
+    self.emit('output-written', txt)
     
   def get_property(self, prop):
     if prop.name == 'auto-scroll':
@@ -161,10 +171,19 @@ class GtkPyInterpreterWidget(Gtk.VBox):
                                           0, 100, 8,
                                           GObject.PARAM_READWRITE),                 
                     }
+                    
+  __gsignals__ = {
+                  'stdout-written' : (GObject.SIGNAL_RUN_LAST,
+                                      GObject.TYPE_NONE,
+                                      (GObject.TYPE_STRING,)),
+                  'stderr-written' : (GObject.SIGNAL_RUN_LAST,
+                                      GObject.TYPE_NONE,
+                                      (GObject.TYPE_STRING,)),
+                  }
   
   name = '__console__'
   line_start = '>>> '
-  banner = 'Welcome to the GtkPyInterpreterWidget :-)'
+  banner = '\nWelcome to the GtkPyInterpreterWidget :-)'
   
   def __init__(self, interpreter_locals={}, history_fn=None):
     super(GtkPyInterpreterWidget, self).__init__()
@@ -203,6 +222,8 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     self.gtk_stderr = GtkInterpreterErrorOutput(self.output)
     self.interpreter = GtkInterpreter(self.gtk_stdout, self.gtk_stderr,
                                       interpreter_locals)
+    self.gtk_stdout.connect('output-written', self._cb_stdout_written)
+    self.gtk_stderr.connect('output-written', self._cb_stderr_written)
     #write banner to output
     self.gtk_stdout.write(self.banner + '\n\n' + self.line_start)
     
@@ -251,6 +272,12 @@ class GtkPyInterpreterWidget(Gtk.VBox):
         #End
         textbuffer.place_cursor(textbuffer.get_end_iter())
         return True
+        
+  def _cb_stdout_written(self, stdout, text):
+    self.emit('stdout-written', text)
+    
+  def _cb_stderr_written(self, stderr, text):
+    self.emit('stderr-written', text)
       
   #private methods    
   def _clear(self):
