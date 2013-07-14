@@ -168,10 +168,12 @@ class CommandCompleter(object):
   def _make_completer(self):
     l = {}
     l.update(__builtin__.__dict__)
+    l.update(locals())
     l.update(self._locals)
     self._completer = Completer(l)
     
   def complete_start(self, text):
+    self._make_completer()
     self._text = text
     self._n = -1
     return self.complete()
