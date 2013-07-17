@@ -50,7 +50,8 @@ class GtkInterpreterStandardOutput(GObject.GObject):
     self.textview = textview
     #properties
     textbuffer = self.textview.get_buffer()
-    textbuffer.create_tag(tag_name='protected', editable=False)
+    if textbuffer.get_tag_table().lookup('protected') == None:
+      textbuffer.create_tag(tag_name='protected', editable=False)
     self._input_mark = textbuffer.get_mark('input_start')
     self._prop_auto_scroll = True
     
