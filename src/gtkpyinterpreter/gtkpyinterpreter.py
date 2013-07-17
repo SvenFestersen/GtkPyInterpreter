@@ -1,6 +1,7 @@
 from code import InteractiveInterpreter
 from rlcompleter import Completer
 from gi.repository import Gdk
+from gi.repository import GdkPixbuf
 from gi.repository import Gtk
 from gi.repository import GObject
 from gi.repository import Pango
@@ -65,6 +66,21 @@ class GtkInterpreterStandardOutput(GObject.GObject):
     if move_cursor:
       textbuffer.place_cursor(textbuffer.get_iter_at_mark(self._input_mark))
     self.emit('output-written', txt)
+    
+  def write_pixbuf(self, pixbuf, move_cursor=False):
+    textbuffer = self.textview.get_buffer()    
+    
+    textbuffer.insert(textbuffer.get_end_iter(), '\n')
+    textbuffer.insert_pixbuf(textbuffer.get_end_iter(), pixbuf)
+    textbuffer.insert(textbuffer.get_end_iter(), '\n')
+    textbuffer.apply_tag_by_name('protected',
+                                  textbuffer.get_iter_at_mark(self._input_mark),
+                                  textbuffer.get_end_iter())     
+    if self._prop_auto_scroll:
+      self.textview.scroll_mark_onscreen(textbuffer.get_insert())
+    textbuffer.move_mark(self._input_mark, textbuffer.get_end_iter())
+    if move_cursor:
+      textbuffer.place_cursor(textbuffer.get_iter_at_mark(self._input_mark))
     
   def do_get_property(self, prop):
     if prop.name == 'auto-scroll':
@@ -520,7 +536,7 @@ if __name__ == '__main__':
   w.set_default_size(800, 600)
   w.connect('destroy', Gtk.main_quit)
   c = GtkPyInterpreterWidget({'window':w}, '/tmp/pyrc')
-  c.set_font('LiberationMono 10')
+  c.set_font('LiberationMono 10')  
   w.add(c)
   w.show_all()
   Gtk.main()
