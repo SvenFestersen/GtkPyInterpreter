@@ -11,6 +11,10 @@ from gtkpyinterpreter import GtkPyInterpreterWidget
 
 class GtkMatplotlibShellWidget(GtkPyInterpreterWidget):
   
+  _figsize = (8, 6)
+  _dpi = 72
+  
+  
   def __init__(self, interpreter_locals={}, history_fn=None):
     self._auto_plot = True
     this_locals = {}
@@ -34,9 +38,8 @@ class GtkMatplotlibShellWidget(GtkPyInterpreterWidget):
   def _pylab_show(self):
     fig = matplotlib.pylab.gcf()
     temp_fn = '/tmp/' + hashlib.md5(str(time.time())).hexdigest() + '.png'
-    fig.savefig(temp_fn)
-    pb = GdkPixbuf.Pixbuf.new_from_file(temp_fn)
-    self.gtk_stdout.write_pixbuf(pb)
+    fig.savefig(temp_fn, figsize=self._figsize, dpi=self._dpi)
+    self.gtk_stdout.write_image(temp_fn)
     
   def _pylab_plot(self, *args, **kwargs):
     matplotlib.pylab.plot(*args, **kwargs)
