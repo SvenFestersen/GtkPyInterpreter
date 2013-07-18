@@ -67,7 +67,7 @@ class GtkInterpreterStandardOutput(GObject.GObject):
       textbuffer.place_cursor(textbuffer.get_iter_at_mark(self._input_mark))
     self.emit('output-written', txt)
     
-  def write_pixbuf(self, pixbuf, move_cursor=False):
+  def write_pixbuf(self, pixbuf, move_cursor=True):
     textbuffer = self.textview.get_buffer()    
     
     textbuffer.insert(textbuffer.get_end_iter(), '\n')
@@ -81,6 +81,10 @@ class GtkInterpreterStandardOutput(GObject.GObject):
     textbuffer.move_mark(self._input_mark, textbuffer.get_end_iter())
     if move_cursor:
       textbuffer.place_cursor(textbuffer.get_iter_at_mark(self._input_mark))
+      
+  def write_image(self, filename, move_cursor=True):
+    pixbuf = GdkPixbuf.Pixbuf.new_from_file(filename)
+    self.write_pixbuf(pixbuf, move_cursor)
     
   def do_get_property(self, prop):
     if prop.name == 'auto-scroll':
