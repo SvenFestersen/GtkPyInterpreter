@@ -13,6 +13,7 @@ Gtk.TextView. The implementation is pure Python and makes use of
 * pass predefined locals to the widget that become available in the interpreter
 * various settings to change the appearance
 * signals for stdout and stderr write operations
+* include graphics in the output
 
 ## Known bugs/limitations
 * no `setup.py` yet
