@@ -13,7 +13,7 @@ class GtkMatplotlibShellWidget(GtkPyInterpreterWidget):
   
   _figsize = (8, 6)
   _dpi = 72
-  
+  banner = '\nWelcome to the matplotlib demo!'
   
   def __init__(self, interpreter_locals={}, history_fn=None):
     self._auto_plot = True
