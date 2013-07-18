@@ -19,6 +19,7 @@ class GtkMatplotlibShellWidget(GtkPyInterpreterWidget):
     self._auto_plot = True
     this_locals = {}
     this_locals.update(matplotlib.pylab.__dict__)
+    this_locals['pylab'] = matplotlib.pylab
     this_locals['autoplot'] = self._toggle_auto_plot
     this_locals['show'] = self._pylab_show
     this_locals['plot'] = self._pylab_plot
@@ -29,6 +30,13 @@ class GtkMatplotlibShellWidget(GtkPyInterpreterWidget):
     this_locals['title'] = self._pylab_title
     this_locals['errorbar'] = self._pylab_errorbar
     this_locals['semilogy'] = self._pylab_semilogy
+    this_locals['pie'] = self._pylab_pie
+    this_locals['bar'] = self._pylab_bar
+    this_locals['hist'] = self._pylab_hist
+    this_locals['imshow'] = self._pylab_imshow
+    this_locals['contour'] = self._pylab_contour
+    this_locals['contourf'] = self._pylab_contourf
+    this_locals['colorbar'] = self._pylab_colorbar
     this_locals.update(interpreter_locals)
     super(GtkMatplotlibShellWidget, self).__init__(this_locals, history_fn)
     
@@ -72,6 +80,34 @@ class GtkMatplotlibShellWidget(GtkPyInterpreterWidget):
   def _pylab_semilogy(self, *args, **kwargs):
     matplotlib.pylab.semilogy(*args, **kwargs)
     if self._auto_plot: self._pylab_show()
+    
+  def _pylab_pie(self, *args, **kwargs):
+    matplotlib.pylab.pie(*args, **kwargs)
+    if self._auto_plot: self._pylab_show()
+    
+  def _pylab_bar(self, *args, **kwargs):
+    matplotlib.pylab.bar(*args, **kwargs)
+    if self._auto_plot: self._pylab_show()
+    
+  def _pylab_hist(self, *args, **kwargs):
+    matplotlib.pylab.hist(*args, **kwargs)
+    if self._auto_plot: self._pylab_show()
+    
+  def _pylab_imshow(self, *args, **kwargs):
+    matplotlib.pylab.imshow(*args, **kwargs)
+    if self._auto_plot: self._pylab_show()
+    
+  def _pylab_contour(self, *args, **kwargs):
+    matplotlib.pylab.contour(*args, **kwargs)
+    if self._auto_plot: self._pylab_show()
+    
+  def _pylab_contourf(self, *args, **kwargs):
+    matplotlib.pylab.contourf(*args, **kwargs)
+    if self._auto_plot: self._pylab_show()
+    
+  def _pylab_colorbar(self, *args, **kwargs):
+    matplotlib.pylab.colorbar(*args, **kwargs)
+    if self._auto_plot: self._pylab_show()
 
 
 if __name__ == '__main__':
@@ -80,8 +116,8 @@ if __name__ == '__main__':
   w.set_title('Gtk3 Matplotlib shell')
   w.set_default_size(800, 600)
   w.connect('destroy', Gtk.main_quit)
-  c = GtkMatplotlibShellWidget({'window':w}, '/tmp/pyrc')
-  c.set_font('LiberationMono 10')  
+  c = GtkMatplotlibShellWidget({'window':w}, '/tmp/matplotlib.pyrc')
+  c.set_font('LiberationMono 10')
   w.add(c)
   w.show_all()
   Gtk.main()
