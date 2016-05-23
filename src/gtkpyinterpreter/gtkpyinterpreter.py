@@ -63,6 +63,8 @@ class GtkInterpreterStandardOutput(GObject.GObject):
     textbuffer.move_mark(self._input_mark, textbuffer.get_end_iter())
     if move_cursor:
       textbuffer.place_cursor(textbuffer.get_iter_at_mark(self._input_mark))
+    while Gtk.events_pending():
+      Gtk.main_iteration()
     self.emit('output-written', txt)
     
   def get_property(self, prop):
