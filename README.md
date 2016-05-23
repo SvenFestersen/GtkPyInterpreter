@@ -13,6 +13,11 @@ Gtk.TextView. The implementation is pure Python and makes use of
 * pass predefined locals to the widget that become available in the interpreter
 * various settings to change the appearance
 * signals for stdout and stderr write operations
+* include graphics in the output
+
+The screenshot below shows the use of the widget as a matplotlib shell (this
+example can be be found in the 'demo' directory).
+![Example use of the widget as matplotlib shell](http://svenfestersen.github.io/GtkPyInterpreter/img/matplotlib-demo.png 'Example use of the widget as matplotlib shell')
 
 ## Known bugs/limitations
 * no `setup.py` yet

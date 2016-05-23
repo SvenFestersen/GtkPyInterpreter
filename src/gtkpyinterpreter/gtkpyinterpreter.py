@@ -1,6 +1,7 @@
 from code import InteractiveInterpreter
 from rlcompleter import Completer
 from gi.repository import Gdk
+from gi.repository import GdkPixbuf
 from gi.repository import Gtk
 from gi.repository import GObject
 from gi.repository import Pango
@@ -50,7 +51,8 @@ class GtkInterpreterStandardOutput(GObject.GObject):
     self.textview = textview
     #properties
     textbuffer = self.textview.get_buffer()
-    textbuffer.create_tag(tag_name='protected', editable=False)
+    if textbuffer.get_tag_table().lookup('protected') == None:
+      textbuffer.create_tag(tag_name='protected', editable=False)
     self._input_mark = textbuffer.get_mark('input_start')
     self._prop_auto_scroll = True
     
@@ -67,17 +69,36 @@ class GtkInterpreterStandardOutput(GObject.GObject):
       Gtk.main_iteration()
     self.emit('output-written', txt)
     
-  def get_property(self, prop):
+  def write_pixbuf(self, pixbuf, move_cursor=True):
+    textbuffer = self.textview.get_buffer()    
+    
+    textbuffer.insert(textbuffer.get_end_iter(), '\n')
+    textbuffer.insert_pixbuf(textbuffer.get_end_iter(), pixbuf)
+    textbuffer.insert(textbuffer.get_end_iter(), '\n')
+    textbuffer.apply_tag_by_name('protected',
+                                  textbuffer.get_iter_at_mark(self._input_mark),
+                                  textbuffer.get_end_iter())     
+    if self._prop_auto_scroll:
+      self.textview.scroll_mark_onscreen(textbuffer.get_insert())
+    textbuffer.move_mark(self._input_mark, textbuffer.get_end_iter())
+    if move_cursor:
+      textbuffer.place_cursor(textbuffer.get_iter_at_mark(self._input_mark))
+      
+  def write_image(self, filename, move_cursor=True):
+    pixbuf = GdkPixbuf.Pixbuf.new_from_file(filename)
+    self.write_pixbuf(pixbuf, move_cursor)
+    
+  def do_get_property(self, prop):
     if prop.name == 'auto-scroll':
       return self._prop_auto_scroll
     else:
-      return super(GtkPythonInterpreter, self).get_property(prop)
+      return super(GtkInterpreterStandardOutput, self).get_property(prop)
     
-  def set_property(self, prop, val):
+  def do_set_property(self, prop, val):
     if prop.name == 'auto-scroll':
       self._prop_auto_scroll = val
     else:
-      super(GtkPythonInterpreter, self).set_property(prop, val)
+      super(GtkInterpreterStandardOutput, self).set_property(prop, val)
       
   def get_auto_scroll(self):
     return self.get_property('auto-scroll')
@@ -88,12 +109,46 @@ class GtkInterpreterStandardOutput(GObject.GObject):
     
 class GtkInterpreterErrorOutput(GtkInterpreterStandardOutput):
   
-  def __init__(self, textview, color='#cc0000'):
+  __gproperties__ = {
+                      'color': (GObject.TYPE_STRING, 'color',
+                      'Error output color.',
+                      '#cc0000', GObject.PARAM_READWRITE),
+                    }
+  
+  def __init__(self, textview):
     super(GtkInterpreterErrorOutput, self).__init__(textview)
-    self.textview.get_buffer().create_tag(tag_name='error', foreground=color)
+    self._color = '#cc0000'
+    self._update_error_tag()
     
   def write(self, txt, move_cursor=False, tag_names=['protected', 'error']):
     super(GtkInterpreterErrorOutput, self).write(txt, move_cursor, tag_names)
+    
+  def _update_error_tag(self):
+    tag_table = self.textview.get_buffer().get_tag_table()
+    if tag_table.lookup('error') == None:
+      self.textview.get_buffer().create_tag(tag_name='error',
+                                            foreground=self._color)
+    else:
+      tag_table.lookup('error').set_property('foreground', self._color)
+                                          
+  def do_get_property(self, prop):
+    if prop.name == 'color':
+      return self._color
+    else:
+      return super(GtkInterpreterErrorOutput, self).get_property(prop)
+    
+  def do_set_property(self, prop, val):
+    if prop.name == 'color':
+      self._color = val
+      self._update_error_tag()
+    else:
+      super(GtkInterpreterErrorOutput, self).set_property(prop, val)
+      
+  def get_color(self):
+    return self.get_property('color')
+    
+  def set_color(self, color):
+    self.set_property('color', color)
     
     
 class CommandHistory(object):
@@ -211,6 +266,10 @@ class GtkPyInterpreterWidget(Gtk.VBox):
                                           'in pixels'),
                                           0, 100, 8,
                                           GObject.PARAM_READWRITE),                 
+                      'error-color':      (GObject.TYPE_STRING, 'error-color',
+                                          'Error text color.',
+                                          '#cc0000',
+                                          GObject.PARAM_READWRITE),                 
                     }
                     
   __gsignals__ = {
@@ -253,6 +312,9 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     sw.add(self.output)
     self.pack_start(sw, True, True, 0)
     self.output.connect('event', self._cb_textview_event)
+    #in and out
+    self.gtk_stdout = GtkInterpreterStandardOutput(self.output)
+    self.gtk_stderr = GtkInterpreterErrorOutput(self.output)
     #locals
     if not '__name__' in interpreter_locals:
       interpreter_locals['__name__'] = self.name
@@ -261,9 +323,9 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     if not '__class__' in interpreter_locals:
       interpreter_locals['__class__'] = self.__class__.__name__
     interpreter_locals['clear'] = self._clear
+    interpreter_locals['stdout'] = self.gtk_stdout
+    interpreter_locals['stderr'] = self.gtk_stderr
     #interpreter
-    self.gtk_stdout = GtkInterpreterStandardOutput(self.output)
-    self.gtk_stderr = GtkInterpreterErrorOutput(self.output)
     self.interpreter = GtkInterpreter(self.gtk_stdout, self.gtk_stderr,
                                       interpreter_locals)
     self.gtk_stdout.connect('output-written', self._cb_stdout_written)
@@ -414,6 +476,8 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       return self._prop_font
     elif prop.name == 'margins':
       return self._prop_margins
+    elif prop.name == 'error-color':
+      return self.gtk_stderr.get_color()
     else:
       return super(GtkPythonInterpreter, self).get_property(prop)
     
@@ -430,6 +494,8 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       self._prop_margins = val
       self.output.set_left_margin(self._prop_margins)
       self.output.set_right_margin(self._prop_margins)
+    elif prop.name == 'error-color':
+      self.gtk_stderr.set_color(val)
     else:
       super(GtkPythonInterpreter, self).set_property(prop, val)
       
@@ -442,6 +508,9 @@ class GtkPyInterpreterWidget(Gtk.VBox):
   def get_auto_scroll(self):
     return self.get_property('auto-scroll')
     
+  def get_error_color(self):
+    return self.get_property('error-color')
+    
   def get_font(self):
     return self.get_property('font')
     
@@ -450,6 +519,9 @@ class GtkPyInterpreterWidget(Gtk.VBox):
       
   def set_auto_scroll(self, scroll):
     self.set_property('auto-scroll', scroll)
+    
+  def set_error_color(self, color):
+    self.set_property('error-color', color)
     
   def set_font(self, font):
     self.set_property('font', font)
@@ -462,15 +534,3 @@ class GtkPyInterpreterWidget(Gtk.VBox):
     
   def get_history(self):
     return self._history
-      
-      
-if __name__ == '__main__':
-  w = Gtk.Window()
-  w.set_title('Gtk3 Interactive Python Interpreter')
-  w.set_default_size(800, 600)
-  w.connect('destroy', Gtk.main_quit)
-  c = GtkPyInterpreterWidget({'window':w}, '/tmp/pyrc')
-  c.set_font('LiberationMono 10')
-  w.add(c)
-  w.show_all()
-  Gtk.main()
